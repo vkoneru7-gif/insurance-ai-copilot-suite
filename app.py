@@ -1,9 +1,13 @@
 import streamlit as st
+import requests
+
 from database import initialize_database, save_workflow_event, get_all_workflow_events
 from services.quote_engine import calculate_quote_risk
 from services.claims_engine import analyze_claim_text
 from services.retrieval_engine import search_policy_documents
 from tabs.quote_tab import render_quote_tab
+
+API_BASE_URL = "http://127.0.0.1:8000"
 
 initialize_database()
 
@@ -287,12 +291,23 @@ with tab1:
                 st.write(f"- {error}")
 
         else:
-            quote_result = calculate_quote_risk(
-                age=age,
-                accidents=accidents,
-                prior_claims=prior_claims,
-                vehicle_type=vehicle
+            quote_response = requests.post(
+                f"{API_BASE_URL}/quote",
+                json={
+                    "customer_name": name,
+                    "age": age,
+                    "state": state,
+                    "vehicle_type": vehicle,
+                    "accidents": accidents,
+                    "prior_claims": prior_claims
+               },
+               timeout=10
             )
+
+            quote_response.raise_for_status()
+
+            quote_api_result = quote_response.json()
+            quote_result = quote_api_result["decision"]
 
             risk_score = quote_result["risk_score"]
             raw_score = quote_result["raw_score"]
