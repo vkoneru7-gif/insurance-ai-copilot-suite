@@ -1,67 +1,185 @@
 # Insurance AI Copilot Suite
 
-A local-first enterprise GenAI platform prototype for insurance operations.
+Enterprise-grade Generative AI platform prototype for insurance operations.
 
-This project demonstrates how an insurance organization could use secure AI workflows to support quote intake, claims triage, policy retrieval, workflow orchestration, and audit logging.
+This project demonstrates how an insurance company can use secure AI workflows, LLM integrations, retrieval systems, orchestration services, and cloud-ready architecture to improve quote intake, claims triage, policy support, and operational efficiency.
 
-## What This Prototype Shows
+---
 
-- FastAPI backend with REST endpoints
-- Streamlit frontend dashboard
-- Quote underwriting workflow
-- Claims triage workflow
-- Policy retrieval with grounded answers
-- Gemini LLM integration with fallback behavior
-- Prompt-injection detection
-- PII redaction before AI processing
-- SQLite audit logging
-- Workflow orchestration endpoint
-- Retrieval telemetry including provider and latency fields
-- AWS-ready architecture roadmap
+# Why This Project Matters
 
-## Current Tech Stack
+Insurance organizations handle repetitive workflows, document-heavy decisions, customer service requests, and regulated data.
+
+This prototype shows how GenAI can be introduced responsibly through:
+
+- API-first architecture
+- secure retrieval before generation
+- human-review routing
+- audit logging
+- workflow orchestration
+- cloud deployment readiness
+
+---
+
+# Core Features
+
+## Quote Copilot
+
+- Risk scoring
+- Underwriting routing
+- Human review escalation
+- Structured API response
+
+## Claims Copilot
+
+- Claim text triage
+- Urgency detection
+- Escalation flags
+- Missing information checks
+
+## Policy Retrieval
+
+- Prompt injection screening
+- PII redaction
+- Grounded retrieval responses
+- Gemini LLM summarization with fallback mode
+
+## Workflow Orchestrator
+
+- Multi-service request coordination
+- Quote + Claim + Retrieval combined workflow
+- Operational traceability
+
+## Audit Events
+
+- Workflow event history
+- Local persistence
+- Future DynamoDB migration path
+
+---
+
+# Tech Stack
+
+## Backend
 
 - Python
 - FastAPI
-- Streamlit
-- SQLite
-- Gemini API
 - Pydantic
-- Requests
-- python-dotenv
 
-## API Endpoints
+## Frontend
 
-| Endpoint | Purpose |
-|---|---|
-| `GET /health` | Health check |
-| `POST /quote` | Quote risk scoring and underwriting route |
-| `POST /claim` | Claims triage and escalation detection |
-| `POST /retrieve` | Secure policy retrieval with LLM summary fallback |
-| `POST /workflow` | Multi-service workflow orchestration |
-| `GET /events` | Workflow and audit event history |
+- Streamlit (prototype UI)
+- React + Next.js migration plan included
 
-## Security Controls
+## AI / GenAI
 
-The prototype includes a basic AI security layer:
+- Gemini API
+- Retrieval-first response pattern
+- Provider fallback handling
 
-- Prompt injection detection
-- PII redaction for email, phone, ZIP, and SSN-like data
-- Blocked request handling
-- Security event logging
-- Safe fallback when LLM provider is unavailable or quota-limited
+## Data
 
-## LLM Integration
+- SQLite (prototype)
+- DynamoDB roadmap
 
-The retrieval workflow integrates Gemini through a backend service layer.
+## DevOps
 
-The LLM is used only to summarize retrieved policy context. It does not make final risk or coverage decisions.
+- Docker
+- GitHub Actions CI
+- Pytest automated tests
 
-If the model provider is unavailable, quota-limited, or fails, the API returns the deterministic grounded answer instead.
+## Cloud Roadmap
 
-## Local Run Instructions
+- AWS ECS / Fargate
+- API Gateway / ALB
+- S3
+- OpenSearch
+- CloudWatch
+- Secrets Manager
+- Amazon Bedrock
 
-Install dependencies:
+---
+
+# API Endpoints
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/health` | Health check |
+| POST | `/quote` | Quote risk decision |
+| POST | `/claim` | Claims triage |
+| POST | `/retrieve` | Secure retrieval + LLM summary |
+| POST | `/workflow` | Multi-service orchestration |
+| GET | `/events` | Audit event history |
+
+---
+
+# Local Run Instructions
+
+## Install Dependencies
 
 ```bash
 pip install -r requirements.txt
+
+Create Environment File
+GEMINI_API_KEY=your_key_here
+Start Backend
+python -m uvicorn api:app --reload
+
+Swagger Docs:
+
+http://127.0.0.1:8000/docs
+Start Frontend
+python -m streamlit run app.py
+
+UI:
+
+http://localhost:8501
+Testing
+
+Run automated API tests:
+
+python -m pytest -v
+
+Current coverage includes:
+
+health endpoint
+quote endpoint
+claim endpoint
+retrieval security blocking
+workflow orchestration
+Docker
+
+Run backend in containerized mode:
+
+docker build -t insurance-ai-api .
+docker run -p 8000:8000 insurance-ai-api
+Security Controls
+Prompt injection detection
+PII redaction before model calls
+Deterministic fallback responses
+Audit logging
+Human review escalation path
+Architecture Documents Included
+architecture.md
+agent_architecture.md
+aws_deployment.md
+frontend-plan.md
+Honest Current Status
+
+Implemented:
+
+Working FastAPI backend
+Working Streamlit frontend
+Gemini integration
+Security controls
+Automated tests
+CI/CD pipeline
+Docker containerization
+AWS deployment roadmap
+
+Not Yet Implemented:
+
+Live AWS deployment
+Real vector database retrieval
+Authentication / RBAC
+Full React frontend
