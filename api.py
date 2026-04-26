@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 import uuid
+import time
 
+from services.gemini_service import generate_policy_summary
+from services.security import run_security_screening
 from services.quote_engine import calculate_quote_risk
 from services.claims_engine import analyze_claim_text
 from services.retrieval_engine import search_policy_documents
@@ -89,24 +92,114 @@ def analyze_claim(request: ClaimRequest):
 
 @app.post("/retrieve")
 def retrieve_policy_answer(request: RetrievalRequest):
-    results = search_policy_documents(request.question)
+    start_time = time.time()
+    provider_used = "gemini"
+    fallback_used = False
+
+    security_result = run_security_screening(request.question)
+
+    if not security_result["allowed"]:
+        save_workflow_event(
+            event_type="Security Event",
+            request_id="SEC-" + str(uuid.uuid4())[:8].upper(),
+            module_name="Security Guard",
+            risk_level="High",
+            route="Blocked Request",
+            confidence=100,
+            escalation_flag="Yes",
+            human_review_required="Yes",
+            latency_seconds=0.2,
+            status="Blocked",
+            notes=f"Prompt injection detected: {', '.join(security_result['matched_patterns'])}"
+        )
+
+        latency_ms = round((time.time() - start_time) * 1000, 2)
+
+        return {
+            "question": request.question,
+            "status": "blocked",
+            "reason": "Potential prompt injection detected.",
+            "matched_patterns": security_result["matched_patterns"],
+            "provider_used": "security_guard",
+            "fallback_used": False,
+            "latency_ms": latency_ms
+        }
+
+    safe_question = security_result["redacted_text"]
+
+    if safe_question != request.question:
+        save_workflow_event(
+            event_type="Security Event",
+            request_id="SEC-" + str(uuid.uuid4())[:8].upper(),
+            module_name="Security Guard",
+            risk_level="Medium",
+            route="PII Redaction",
+            confidence=100,
+            escalation_flag="No",
+            human_review_required="No",
+            latency_seconds=0.2,
+            status="Completed",
+            notes="PII detected and redacted before retrieval processing."
+        )
+
+    results = search_policy_documents(safe_question)
 
     if not results:
+        latency_ms = round((time.time() - start_time) * 1000, 2)
+
         return {
             "question": request.question,
             "confidence": "Low",
             "message": "No matching policy documents found.",
-            "results": []
+            "results": [],
+            "provider_used": "retrieval_only",
+            "fallback_used": False,
+            "latency_ms": latency_ms,
+            "security": {
+                "pii_redacted": safe_question != request.question,
+                "screened": True
+            }
         }
 
     top_result = results[0]
 
+    grounded_context = (
+        f"Source: {top_result['title']}\n"
+        f"Snippet: {top_result['snippet']}\n"
+        f"Policy Answer: {top_result['answer']}"
+    )
+
+    try:
+        llm_summary = generate_policy_summary(
+            question=safe_question,
+            grounded_context=grounded_context
+        )
+        llm_status = "success"
+
+    except Exception:
+        llm_summary = "LLM summary unavailable. Returning rule-based grounded answer only."
+        llm_status = "fallback_used_provider_unavailable_or_quota_limited"
+        provider_used = "fallback"
+        fallback_used = True
+
+    latency_ms = round((time.time() - start_time) * 1000, 2)
+
     return {
         "question": request.question,
+        "safe_question_used_for_llm": safe_question,
         "confidence": "High" if top_result["score"] >= 75 else "Medium",
         "top_answer": top_result["answer"],
+        "llm_summary": llm_summary,
+        "llm_status": llm_status,
+        "provider_used": provider_used,
+        "fallback_used": fallback_used,
+        "latency_ms": latency_ms,
         "top_source": top_result["title"],
-        "results": results
+        "results": results,
+        "security": {
+            "pii_redacted": safe_question != request.question,
+            "screened": True
+        }
     }
 
 
